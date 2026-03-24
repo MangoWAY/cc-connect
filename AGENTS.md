@@ -256,6 +256,17 @@ All standard commands are documented in the `Makefile` and `CLAUDE.md`/`AGENTS.m
 | Lint | `golangci-lint run ./...` (add `$(go env GOPATH)/bin` to `PATH` if needed) |
 | Run (after build) | `./cc-connect` |
 
+### Auto-generated config.toml
+
+The update script auto-generates `~/.cc-connect/config.toml` from environment secrets on every VM startup. Required secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `FEISHU_APP_ID` | 飞书应用的 App ID |
+| `FEISHU_APP_SECRET` | 飞书应用的 App Secret |
+
+If these secrets are not set, the config generation step is skipped and cc-connect will use whatever config already exists (or create a default one on first run).
+
 ### Gotchas
 
 - `golangci-lint` reports many existing `errcheck` and `unused` warnings in the codebase — these are pre-existing and not blocking. Do not attempt to fix them unless specifically asked.
