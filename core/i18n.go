@@ -249,11 +249,12 @@ const (
 	MsgStatusCron       MsgKey = "status_cron"
 	MsgStatusQuiet      MsgKey = "status_quiet"
 	MsgStatusSessionKey MsgKey = "status_session_key"
-	MsgQuietOnShort  MsgKey = "quiet_on_short"
-	MsgQuietOffShort MsgKey = "quiet_off_short"
+	MsgQuietOnShort     MsgKey = "quiet_on_short"
+	MsgQuietOffShort    MsgKey = "quiet_off_short"
 
 	MsgModelDefault               MsgKey = "model_default"
 	MsgModelListTitle             MsgKey = "model_list_title"
+	MsgModelNoneAvailable         MsgKey = "model_none_available"
 	MsgModelUsage                 MsgKey = "model_usage"
 	MsgReasoningDefault           MsgKey = "reasoning_default"
 	MsgReasoningListTitle         MsgKey = "reasoning_list_title"
@@ -452,21 +453,21 @@ const (
 	MsgBuiltinCmdShell     MsgKey = "shell"
 
 	// Multi-workspace messages
-	MsgWsNotEnabled        MsgKey = "ws_not_enabled"
-	MsgWsNoBinding         MsgKey = "ws_no_binding"
-	MsgWsInfo              MsgKey = "ws_info"
-	MsgWsInitUsage         MsgKey = "ws_init_usage"
-	MsgWsBindUsage         MsgKey = "ws_bind_usage"
-	MsgWsBindSuccess       MsgKey = "ws_bind_success"
-	MsgWsBindNotFound      MsgKey = "ws_bind_not_found"
-	MsgWsUnbindSuccess     MsgKey = "ws_unbind_success"
-	MsgWsListEmpty         MsgKey = "ws_list_empty"
-	MsgWsListTitle         MsgKey = "ws_list_title"
-	MsgWsNotFoundHint      MsgKey = "ws_not_found_hint"
-	MsgWsResolutionError   MsgKey = "ws_resolution_error"
-	MsgWsCloneProgress     MsgKey = "ws_clone_progress"
-	MsgWsCloneSuccess      MsgKey = "ws_clone_success"
-	MsgWsCloneFailed       MsgKey = "ws_clone_failed"
+	MsgWsNotEnabled      MsgKey = "ws_not_enabled"
+	MsgWsNoBinding       MsgKey = "ws_no_binding"
+	MsgWsInfo            MsgKey = "ws_info"
+	MsgWsInitUsage       MsgKey = "ws_init_usage"
+	MsgWsBindUsage       MsgKey = "ws_bind_usage"
+	MsgWsBindSuccess     MsgKey = "ws_bind_success"
+	MsgWsBindNotFound    MsgKey = "ws_bind_not_found"
+	MsgWsUnbindSuccess   MsgKey = "ws_unbind_success"
+	MsgWsListEmpty       MsgKey = "ws_list_empty"
+	MsgWsListTitle       MsgKey = "ws_list_title"
+	MsgWsNotFoundHint    MsgKey = "ws_not_found_hint"
+	MsgWsResolutionError MsgKey = "ws_resolution_error"
+	MsgWsCloneProgress   MsgKey = "ws_clone_progress"
+	MsgWsCloneSuccess    MsgKey = "ws_clone_success"
+	MsgWsCloneFailed     MsgKey = "ws_clone_failed"
 )
 
 var messages = map[MsgKey]map[Language]string{
@@ -1784,6 +1785,13 @@ var messages = map[MsgKey]map[Language]string{
 		LangTraditionalChinese: "可用模型:\n",
 		LangJapanese:           "利用可能なモデル:\n",
 		LangSpanish:            "Modelos disponibles:\n",
+	},
+	MsgModelNoneAvailable: {
+		LangEnglish:            "No models are available for this Cursor account (run `agent login` or check your subscription). `/model` cannot switch until models are listed by the CLI.",
+		LangChinese:            "当前 Cursor 账号下没有可用模型（请运行 `agent login` 或检查订阅）。在 CLI 能列出模型之前，`/model` 无法切换。",
+		LangTraditionalChinese: "目前 Cursor 帳號沒有可用模型（請執行 `agent login` 或檢查訂閱）。在 CLI 能列出模型之前，`/model` 無法切換。",
+		LangJapanese:           "この Cursor アカウントで利用可能なモデルがありません（`agent login` を実行するか、契約を確認してください）。CLI がモデルを一覧表示できるまで `/model` は切り替えできません。",
+		LangSpanish:            "No hay modelos disponibles para esta cuenta de Cursor (ejecute `agent login` o revise su suscripción). `/model` no puede cambiar hasta que la CLI liste modelos.",
 	},
 	MsgModelUsage: {
 		LangEnglish:            "Usage: `/model <number>` or `/model <model_name>`",

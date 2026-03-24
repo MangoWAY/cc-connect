@@ -4,18 +4,25 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
-	"encoding/json"
 	"unicode/utf8"
 
 	"github.com/chenhg5/cc-connect/core"
+)
+
+// Cursor Agent CLI prints progress spinners with ANSI CSI sequences unless CI=1 (see `agent models` help / behavior).
+var (
+	ansiCSIRe = regexp.MustCompile(`\x1b\[[0-?]*[ -/]*[@-~]`)
+	ansiOSCRe = regexp.MustCompile(`\x1b\][^\a]*(?:\a|\x1b\\)`)
 )
 
 func init() {
@@ -99,30 +106,31 @@ func (a *Agent) GetModel() string {
 func (a *Agent) AvailableModels(ctx context.Context) []core.ModelOption {
 	a.mu.Lock()
 	cmd := a.cmd
+	workDir := a.workDir
 	extraEnv := a.providerEnvLocked()
 	extraEnv = append(extraEnv, a.sessionEnv...)
 	a.mu.Unlock()
 
-	if models := fetchModelsFromAgentCLI(ctx, cmd, extraEnv); len(models) > 0 {
-		return models
+	models, ok := fetchModelsFromAgentCLI(ctx, cmd, workDir, extraEnv)
+	if !ok {
+		return cursorFallbackModels()
 	}
-	return cursorFallbackModels()
+	return models
 }
 
-// fetchModelsFromAgentCLI runs `agent models` and parses the output.
-// Output format: "model-id - Display Name  (current)" or "model-id - Display Name"
-func fetchModelsFromAgentCLI(ctx context.Context, cmd string, extraEnv []string) []core.ModelOption {
-	c := exec.CommandContext(ctx, cmd, "models")
-	c.Env = append(os.Environ(), extraEnv...)
-	out, err := c.Output()
-	if err != nil {
-		slog.Debug("cursor: agent models failed", "error", err)
-		return nil
-	}
+func stripANSIFromCLIOutput(s string) string {
+	s = ansiOSCRe.ReplaceAllString(s, "")
+	s = ansiCSIRe.ReplaceAllString(s, "")
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
+}
 
+// parseAgentModelsOutput parses plain-text lines from `agent models`.
+// Expected format per Cursor CLI: "model-id - Display Name  (current)" or "model-id - Display Name".
+func parseAgentModelsOutput(text string) []core.ModelOption {
 	var models []core.ModelOption
 	seen := make(map[string]struct{})
-	for _, line := range strings.Split(string(out), "\n") {
+	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || line == "Available models" || strings.HasPrefix(line, "Tip:") {
 			continue
@@ -136,7 +144,6 @@ func fetchModelsFromAgentCLI(ctx context.Context, cmd string, extraEnv []string)
 		if name == "" {
 			continue
 		}
-		// Remove trailing markers like "(current)", "(default)"
 		desc = strings.TrimSuffix(desc, " (current)")
 		desc = strings.TrimSuffix(desc, " (default)")
 		desc = strings.TrimSpace(desc)
@@ -148,6 +155,36 @@ func fetchModelsFromAgentCLI(ctx context.Context, cmd string, extraEnv []string)
 	}
 	sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
 	return models
+}
+
+// fetchModelsFromAgentCLI runs `agent models` and parses the output.
+// It sets CI=1 so the CLI omits ANSI spinner output that would break line-based parsing.
+// The second return value is false if the CLI process failed (then callers may use a fallback list).
+func fetchModelsFromAgentCLI(ctx context.Context, cmd, workDir string, extraEnv []string) ([]core.ModelOption, bool) {
+	c := exec.CommandContext(ctx, cmd, "models")
+	if workDir != "" {
+		c.Dir = workDir
+	}
+	env := append([]string{}, os.Environ()...)
+	env = append(env, extraEnv...)
+	// Force plain-text output from Cursor Agent CLI (spinner uses ANSI unless CI is set).
+	env = append(env, "CI=1", "NO_COLOR=1")
+	c.Env = env
+	out, err := c.Output()
+	if err != nil {
+		slog.Debug("cursor: agent models failed", "error", err)
+		return nil, false
+	}
+
+	text := strings.TrimSpace(stripANSIFromCLIOutput(string(out)))
+	if text == "" {
+		return nil, true
+	}
+	lower := strings.ToLower(text)
+	if strings.Contains(lower, "no models available") {
+		return nil, true
+	}
+	return parseAgentModelsOutput(text), true
 }
 
 func cursorFallbackModels() []core.ModelOption {
