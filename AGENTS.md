@@ -234,3 +234,41 @@ Available tags: `no_claudecode`, `no_codex`, `no_cursor`, `no_gemini`,
 6. Optionally implement `AgentDoctorInfo` for `cc-connect doctor` support
 7. Add config example in `config.example.toml`
 8. Add unit tests
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- Go 1.25.0 is pre-installed. `golangci-lint` is installed at `$(go env GOPATH)/bin/golangci-lint`.
+- No databases, Docker, or external services are needed — CC-Connect is a self-contained Go binary that persists state as local JSON files in `~/.cc-connect/`.
+- Cursor Agent CLI is installed at `~/.local/bin/agent` (via `curl https://cursor.com/install -fsSL | bash`). Ensure `~/.local/bin` is in `PATH`.
+- Running the full application end-to-end requires messaging platform API credentials and at least one agent CLI (e.g. `claude`, `agent`). Unit tests do **not** require any of these.
+
+### Key commands
+
+All standard commands are documented in the `Makefile` and `CLAUDE.md`/`AGENTS.md` above. Quick reference:
+
+| Task | Command |
+|------|---------|
+| Build | `make build` (or `go build ./cmd/cc-connect`) |
+| Test | `go test ./...` |
+| Test with race detector | `go test -race ./...` |
+| Lint | `golangci-lint run ./...` (add `$(go env GOPATH)/bin` to `PATH` if needed) |
+| Run (after build) | `./cc-connect` |
+
+### Auto-generated config.toml
+
+The update script auto-generates `~/.cc-connect/config.toml` from environment secrets on every VM startup. Required secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `FEISHU_APP_ID` | 飞书应用的 App ID |
+| `FEISHU_APP_SECRET` | 飞书应用的 App Secret |
+
+If these secrets are not set, the config generation step is skipped and cc-connect will use whatever config already exists (or create a default one on first run).
+
+### Gotchas
+
+- `golangci-lint` reports many existing `errcheck` and `unused` warnings in the codebase — these are pre-existing and not blocking. Do not attempt to fix them unless specifically asked.
+- The binary auto-creates `~/.cc-connect/config.toml` on first run if no config exists. Without valid platform credentials, it exits immediately with a helpful message — this is expected.
+- The `cc-connect doctor` subcommand requires a valid config with an agent configured; it will error if the agent CLI binary is not in `PATH`.
