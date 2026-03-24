@@ -148,6 +148,15 @@ func (a *stubModelModeAgent) AvailableReasoningEfforts() []string {
 	return []string{"low", "medium", "high", "xhigh"}
 }
 
+// stubEmptyModelsAgent implements ModelSwitcher but reports no selectable models (e.g. Cursor CLI with no account models).
+type stubEmptyModelsAgent struct {
+	stubModelModeAgent
+}
+
+func (a *stubEmptyModelsAgent) AvailableModels(_ context.Context) []ModelOption {
+	return nil
+}
+
 type stubListAgent struct {
 	stubAgent
 	sessions []AgentSessionInfo
@@ -1414,6 +1423,56 @@ func TestCmdModel_UsesInlineButtonsOnButtonOnlyPlatform(t *testing.T) {
 	}
 	if got := p.buttonRows[0][0].Data; got != "cmd:/model 1" {
 		t.Fatalf("first /model button = %q, want %q", got, "cmd:/model 1")
+	}
+}
+
+func TestCmdModel_PlainTextWhenNoModelsAvailable(t *testing.T) {
+	p := &stubPlatformEngine{n: "plain"}
+	agent := &stubEmptyModelsAgent{}
+	e := NewEngine("test", agent, []Platform{p}, "", LangEnglish)
+
+	e.cmdModel(p, &Message{SessionKey: "test:user1", ReplyCtx: "ctx"}, nil)
+
+	if len(p.sent) != 1 {
+		t.Fatalf("sent messages = %d, want 1", len(p.sent))
+	}
+	if !strings.Contains(p.sent[0], "No models are available") {
+		t.Fatalf("reply = %q, want MsgModelNoneAvailable text", p.sent[0])
+	}
+	if strings.Contains(p.sent[0], "Available models:") {
+		t.Fatalf("reply should not list models: %q", p.sent[0])
+	}
+}
+
+func TestCmdModel_NoModels_AllowsSetByRawName(t *testing.T) {
+	p := &stubPlatformEngine{n: "plain"}
+	agent := &stubEmptyModelsAgent{}
+	e := NewEngine("test", agent, []Platform{p}, "", LangEnglish)
+	msg := &Message{SessionKey: "test:user1", ReplyCtx: "ctx"}
+
+	e.cmdModel(p, msg, []string{"custom-model-id"})
+
+	if agent.model != "custom-model-id" {
+		t.Fatalf("model = %q, want custom-model-id", agent.model)
+	}
+	if len(p.sent) != 1 || !strings.Contains(p.sent[0], "custom-model-id") {
+		t.Fatalf("reply = %q", p.sent[0])
+	}
+}
+
+func TestCmdModel_NoModels_RejectsNumericIndex(t *testing.T) {
+	p := &stubPlatformEngine{n: "plain"}
+	agent := &stubEmptyModelsAgent{}
+	e := NewEngine("test", agent, []Platform{p}, "", LangEnglish)
+	msg := &Message{SessionKey: "test:user1", ReplyCtx: "ctx"}
+
+	e.cmdModel(p, msg, []string{"1"})
+
+	if agent.model != "" {
+		t.Fatalf("model should stay empty, got %q", agent.model)
+	}
+	if len(p.sent) != 1 || !strings.Contains(p.sent[0], "No models are available") {
+		t.Fatalf("reply = %q", p.sent[0])
 	}
 }
 

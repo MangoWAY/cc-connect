@@ -3507,6 +3507,11 @@ func (e *Engine) cmdModel(p Platform, msg *Message, args []string) {
 				sb.WriteString("\n")
 			}
 			sb.WriteString("\n")
+			if len(models) == 0 {
+				sb.WriteString(e.i18n.T(MsgModelNoneAvailable))
+				e.reply(p, msg.ReplyCtx, sb.String())
+				return
+			}
 			sb.WriteString(e.i18n.T(MsgModelListTitle))
 			var buttons [][]ButtonOption
 			var row []ButtonOption
@@ -3548,6 +3553,22 @@ func (e *Engine) cmdModel(p Platform, msg *Message, args []string) {
 	models := switcher.AvailableModels(fetchCtx)
 
 	target := args[0]
+	if len(models) == 0 {
+		if idx, err := strconv.Atoi(strings.TrimSpace(target)); err == nil && idx >= 1 {
+			e.reply(p, msg.ReplyCtx, e.i18n.T(MsgModelNoneAvailable))
+			return
+		}
+		switcher.SetModel(strings.TrimSpace(target))
+		e.cleanupInteractiveState(msg.SessionKey)
+
+		s := e.sessions.GetOrCreateActive(msg.SessionKey)
+		s.SetAgentSessionID("", "")
+		s.ClearHistory()
+		e.sessions.Save()
+
+		e.reply(p, msg.ReplyCtx, e.i18n.Tf(MsgModelChanged, strings.TrimSpace(target)))
+		return
+	}
 	if idx, err := strconv.Atoi(target); err == nil && idx >= 1 && idx <= len(models) {
 		target = models[idx-1].Name
 	}
@@ -4607,7 +4628,11 @@ func (e *Engine) executeCardAction(cmd, args, sessionKey string) {
 		defer cancel()
 		models := switcher.AvailableModels(fetchCtx)
 		target := args
-		if idx, err := strconv.Atoi(target); err == nil && idx >= 1 && idx <= len(models) {
+		if len(models) == 0 {
+			if _, err := strconv.Atoi(strings.TrimSpace(target)); err == nil {
+				return
+			}
+		} else if idx, err := strconv.Atoi(target); err == nil && idx >= 1 && idx <= len(models) {
 			target = models[idx-1].Name
 		}
 		switcher.SetModel(target)
@@ -5142,6 +5167,10 @@ func (e *Engine) renderModelCard() *Card {
 		sb.WriteString(e.i18n.T(MsgModelDefault))
 	} else {
 		sb.WriteString(e.i18n.Tf(MsgModelCurrent, current))
+	}
+	if len(models) == 0 {
+		sb.WriteString("\n\n")
+		sb.WriteString(e.i18n.T(MsgModelNoneAvailable))
 	}
 
 	var opts []CardSelectOption
