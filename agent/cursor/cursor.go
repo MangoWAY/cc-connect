@@ -166,8 +166,9 @@ func fetchModelsFromAgentCLI(ctx context.Context, cmd, workDir string, extraEnv 
 		c.Dir = workDir
 	}
 	env := append([]string{}, os.Environ()...)
-	env = append(env, "CI=1", "NO_COLOR=1")
 	env = append(env, extraEnv...)
+	// Force plain-text output from Cursor Agent CLI (spinner uses ANSI unless CI is set).
+	env = append(env, "CI=1", "NO_COLOR=1")
 	c.Env = env
 	out, err := c.Output()
 	if err != nil {
