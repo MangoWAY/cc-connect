@@ -241,7 +241,8 @@ Available tags: `no_claudecode`, `no_codex`, `no_cursor`, `no_gemini`,
 
 - Go 1.25.0 is pre-installed. `golangci-lint` is installed at `$(go env GOPATH)/bin/golangci-lint`.
 - No databases, Docker, or external services are needed — CC-Connect is a self-contained Go binary that persists state as local JSON files in `~/.cc-connect/`.
-- Running the full application end-to-end requires messaging platform API credentials and at least one agent CLI (e.g. `claude`). Unit tests do **not** require any of these.
+- Cursor Agent CLI is installed at `~/.local/bin/agent` (via `curl https://cursor.com/install -fsSL | bash`). Ensure `~/.local/bin` is in `PATH`.
+- Running the full application end-to-end requires messaging platform API credentials and at least one agent CLI (e.g. `claude`, `agent`). Unit tests do **not** require any of these.
 
 ### Key commands
 
